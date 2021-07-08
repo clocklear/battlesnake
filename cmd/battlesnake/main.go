@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 
-	v1 "github.com/BattlesnakeOfficial/starter-snake-go/lib/v1"
+	v1 "github.com/clocklear/battlesnake/lib/v1"
 )
 
 type BattlesnakeInfoResponse struct {
@@ -79,17 +80,19 @@ func HandleMove(w http.ResponseWriter, r *http.Request) {
 		Board: request.Board,
 		You:   request.You,
 	}
-	move, yell := s.Next()
 
-	// Build response
-	response := MoveResponse{
-		Move:  string(move),
-		Shout: yell,
+	var resp MoveResponse
+	possibleMoves, err := s.Next()
+	if err != nil {
+		resp.Move = "up"
+		resp.Shout = negativeResponse()
+	} else {
+		resp.Move = string(randDirection(possibleMoves))
 	}
 
-	fmt.Printf("GameID: %s - Move: %s\n", request.Game.ID, response.Move)
+	fmt.Printf("GameID: %s - Move: %s\n", request.Game.ID, resp.Move)
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(resp)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -121,4 +124,22 @@ func main() {
 
 	fmt.Printf("Starting Battlesnake Server at http://0.0.0.0:%s...\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
+}
+
+func negativeResponse() string {
+	r := []string{
+		"oh crap",
+		"bummer",
+		"ouch",
+		"whoops",
+		"dangit",
+		"good game",
+		"sayonara",
+		"eeeks",
+	}
+	return r[rand.Intn(len(r))]
+}
+
+func randDirection(d []v1.Direction) v1.Direction {
+	return d[rand.Intn(len(d))]
 }
