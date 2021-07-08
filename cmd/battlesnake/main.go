@@ -82,7 +82,9 @@ func HandleMove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resp MoveResponse
-	possibleMoves, err := s.Next()
+	possibleMoves, err := s.Next(v1.SolveOptions{
+		UseScoring: true, // enable scoring to optimize next best option
+	})
 	if err != nil {
 		resp.Move = "up"
 		resp.Shout = negativeResponse()

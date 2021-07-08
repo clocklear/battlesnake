@@ -1,6 +1,9 @@
 package v1
 
-import "math/rand"
+import (
+	"math"
+	"math/rand"
+)
 
 // Coord represents a point on the game board, optionally also
 // containing the direction that resulted in the Coord.
@@ -8,6 +11,7 @@ type Coord struct {
 	X         int       `json:"x"`
 	Y         int       `json:"y"`
 	Direction Direction `json:"-"`
+	Score     float64   `json:"-"`
 }
 
 // Project shifts the Coord in the given direction
@@ -41,6 +45,11 @@ func (c Coord) Project(d Direction) Coord {
 		}
 	}
 	return c
+}
+
+// DistanceFrom returns the distance this Coord is from the given Coord
+func (c Coord) DistanceFrom(other Coord) float64 {
+	return math.Sqrt(math.Pow(float64(other.X-c.X), 2) + math.Pow(float64(other.Y-c.Y), 2))
 }
 
 // WithinBounds determines if the Coord is within the boundaries
@@ -92,4 +101,29 @@ func (cl CoordList) Directions() []Direction {
 		}
 	}
 	return ret
+}
+
+// Return a subset list made of the first N items
+func (cl CoordList) First(n int) CoordList {
+	cnt := 0
+	resp := CoordList{}
+	for _, c := range cl {
+		if cnt >= n {
+			continue
+		}
+		resp = append(resp, c)
+		cnt += 1
+	}
+	return resp
+}
+
+// AverageDistance returns the average distance the given coordinate is
+// from the list by calculating the distance from each point and averaging
+// them.
+func (cl CoordList) AverageDistance(c Coord) float64 {
+	var total float64
+	for _, i := range cl {
+		total += c.DistanceFrom(i)
+	}
+	return total / float64(len(cl))
 }
