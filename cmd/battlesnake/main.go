@@ -4,37 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
+
+	v1 "github.com/BattlesnakeOfficial/starter-snake-go/lib/v1"
 )
-
-type Game struct {
-	ID      string `json:"id"`
-	Timeout int32  `json:"timeout"`
-}
-
-type Coord struct {
-	X int `json:"x"`
-	Y int `json:"y"`
-}
-
-type Battlesnake struct {
-	ID     string  `json:"id"`
-	Name   string  `json:"name"`
-	Health int32   `json:"health"`
-	Body   []Coord `json:"body"`
-	Head   Coord   `json:"head"`
-	Length int32   `json:"length"`
-	Shout  string  `json:"shout"`
-}
-
-type Board struct {
-	Height int           `json:"height"`
-	Width  int           `json:"width"`
-	Food   []Coord       `json:"food"`
-	Snakes []Battlesnake `json:"snakes"`
-}
 
 type BattlesnakeInfoResponse struct {
 	APIVersion string `json:"apiversion"`
@@ -45,10 +19,10 @@ type BattlesnakeInfoResponse struct {
 }
 
 type GameRequest struct {
-	Game  Game        `json:"game"`
-	Turn  int         `json:"turn"`
-	Board Board       `json:"board"`
-	You   Battlesnake `json:"you"`
+	Game  v1.Game        `json:"game"`
+	Turn  int            `json:"turn"`
+	Board v1.Board       `json:"board"`
+	You   v1.Battlesnake `json:"you"`
 }
 
 type MoveResponse struct {
@@ -91,7 +65,6 @@ func HandleStart(w http.ResponseWriter, r *http.Request) {
 
 // HandleMove is called for each turn of each game.
 // Valid responses are "up", "down", "left", or "right".
-// TODO: Use the information in the GameRequest object to determine your next move.
 func HandleMove(w http.ResponseWriter, r *http.Request) {
 	request := GameRequest{}
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -99,15 +72,22 @@ func HandleMove(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	// Choose a random direction to move in
-	possibleMoves := []string{"up", "down", "left", "right"}
-	move := possibleMoves[rand.Intn(len(possibleMoves))]
+	// Create a solver and use it to determine what we do next
+	s := v1.Solver{
+		Game:  request.Game,
+		Turn:  request.Turn,
+		Board: request.Board,
+		You:   request.You,
+	}
+	move, yell := s.Next()
 
+	// Build response
 	response := MoveResponse{
-		Move: move,
+		Move:  string(move),
+		Shout: yell,
 	}
 
-	fmt.Printf("MOVE: %s\n", response.Move)
+	fmt.Printf("GameID: %s - Move: %s\n", request.Game.ID, response.Move)
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
