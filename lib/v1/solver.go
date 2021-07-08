@@ -1,5 +1,7 @@
 package v1
 
+import "sort"
+
 type Solver struct {
 	Game  Game
 	Turn  int
@@ -7,9 +9,13 @@ type Solver struct {
 	You   Battlesnake
 }
 
+type SolveOptions struct {
+	UseScoring bool
+}
+
 // Next returns a list of possible directions that could be taken next
 // for the given game state.  An error is raised if something prevents that.
-func (s Solver) Next() ([]Direction, error) {
+func (s Solver) Next(opts SolveOptions) ([]Direction, error) {
 
 	// Derive possible moves from given position
 	// Takes walls, hazards, own body into consideration
@@ -22,6 +28,12 @@ func (s Solver) Next() ([]Direction, error) {
 	// Consider other snakes positions and possible next positions
 	otherSnakesPositions := CoordList{}
 	for _, snake := range s.Board.Snakes {
+		// My snake can be in this list.  Skip it.
+		if snake.ID == s.You.ID {
+			continue
+		}
+
+		// Gather position of this snakes body pieces
 		otherSnakesPositions = append(otherSnakesPositions, snake.Body...)
 
 		// Determine possible moves of this snake
@@ -41,6 +53,31 @@ func (s Solver) Next() ([]Direction, error) {
 		return nil, ErrNoPossibleMove
 	}
 
-	// Have things we can do!
+	if opts.UseScoring {
+		// Score the results
+		myPossibleMoves = s.score(myPossibleMoves).First(2)
+	}
+
+	// Return top two results as these are the best options
 	return myPossibleMoves.Directions(), nil
+}
+
+func (s Solver) score(moves CoordList) CoordList {
+	// Given the list of possible moves, 'score' each one, sort the list
+	// based on score, and return
+	scored := CoordList{}
+	for _, m := range moves {
+		// Score by avoiding self
+		// Find avg distance to first 8 body points
+		avgDistance := s.You.Body.First(8).AverageDistance(m)
+		m.Score = avgDistance
+		scored = append(scored, m)
+	}
+
+	// Sort the result
+	sort.Slice(scored, func(i, j int) bool {
+		return scored[i].Score < scored[j].Score
+	})
+
+	return scored
 }

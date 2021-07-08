@@ -21,6 +21,7 @@ var opposingSnakeBoard Board = Board{
 	Width:  11,
 	Snakes: []Battlesnake{
 		{
+			ID: "not-you",
 			Head: Coord{
 				X: 1,
 				Y: 1,
@@ -47,6 +48,7 @@ func TestNext(t *testing.T) {
 		board              Board
 		you                Battlesnake
 		possibleDirections []Direction
+		opts               SolveOptions
 		expectedError      error
 	}{
 		{
@@ -71,6 +73,7 @@ func TestNext(t *testing.T) {
 				LEFT,
 				RIGHT,
 			},
+			opts: SolveOptions{},
 		},
 		{
 			desc:  "body limits options",
@@ -97,6 +100,7 @@ func TestNext(t *testing.T) {
 				DOWN,
 				LEFT,
 			},
+			opts: SolveOptions{},
 		},
 		{
 			desc:  "walls limit options",
@@ -121,6 +125,7 @@ func TestNext(t *testing.T) {
 			possibleDirections: []Direction{
 				UP,
 			},
+			opts: SolveOptions{},
 		},
 		{
 			desc: "no moves available",
@@ -152,6 +157,7 @@ func TestNext(t *testing.T) {
 				},
 			},
 			expectedError: ErrNoPossibleMove,
+			opts:          SolveOptions{},
 		},
 		{
 			desc:  "snake limits options",
@@ -176,6 +182,7 @@ func TestNext(t *testing.T) {
 			possibleDirections: []Direction{
 				UP,
 			},
+			opts: SolveOptions{},
 		},
 	}
 	for _, tC := range testCases {
@@ -186,7 +193,7 @@ func TestNext(t *testing.T) {
 				Board: tC.board,
 				You:   tC.you,
 			}
-			possibleMoves, err := s.Next()
+			possibleMoves, err := s.Next(tC.opts)
 			if tC.expectedError != nil {
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, tC.expectedError)
