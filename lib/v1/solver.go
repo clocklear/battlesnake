@@ -1,7 +1,5 @@
 package v1
 
-import "math/rand"
-
 type Solver struct {
 	Game  Game
 	Turn  int
@@ -9,16 +7,16 @@ type Solver struct {
 	You   Battlesnake
 }
 
-// Next returns the next direction that should be applied
-// for the given game state.  Optionally, it can return something to yell.
-func (s Solver) Next() (Direction, string) {
+// Next returns a list of possible directions that could be taken next
+// for the given game state.  An error is raised if something prevents that.
+func (s Solver) Next() ([]Direction, error) {
 
 	// Derive possible moves from given position
 	// Takes walls, hazards, own body into consideration
 	myPossibleMoves, err := s.You.PossibleMoves(s.Board)
 	if err != nil {
 		// bleh. Nothing to do.
-		return UP, s.negativeResponse()
+		return nil, err
 	}
 
 	// Consider other snakes positions and possible next positions
@@ -40,23 +38,9 @@ func (s Solver) Next() (Direction, string) {
 
 	if len(myPossibleMoves) == 0 {
 		// bleh. out of possibilities
-		return UP, s.negativeResponse()
+		return nil, ErrNoPossibleMove
 	}
 
-	// Have something we can do!
-	return myPossibleMoves[rand.Intn(len(myPossibleMoves))].Direction, ""
-}
-
-func (s Solver) negativeResponse() string {
-	r := []string{
-		"oh crap",
-		"bummer",
-		"ouch",
-		"whoops",
-		"dangit",
-		"good game",
-		"sayonara",
-		"eeeks",
-	}
-	return r[rand.Intn(len(r))]
+	// Have things we can do!
+	return myPossibleMoves.Directions(), nil
 }
