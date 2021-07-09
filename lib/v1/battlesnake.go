@@ -61,3 +61,15 @@ func (bs Battlesnake) PossibleMoves(b Board) (CoordList, error) {
 	}
 	return cl, nil
 }
+
+// Project moves the Battlesnake to the given coordinate
+func (bs Battlesnake) Project(loc Coord, willGrow bool) Battlesnake {
+	bs.Head = loc
+	// Prepend head to body
+	bs.Body = append([]Coord{loc}, bs.Body...)
+	if !willGrow {
+		// Drop last elem
+		bs.Body = bs.Body[:len(bs.Body)-1]
+	}
+	return bs
+}

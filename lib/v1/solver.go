@@ -11,6 +11,7 @@ type Solver struct {
 
 type SolveOptions struct {
 	UseScoring bool
+	Lookahead  bool
 }
 
 // Next returns a list of possible directions that could be taken next
@@ -47,6 +48,28 @@ func (s Solver) Next(opts SolveOptions) ([]Direction, error) {
 
 	// Determine if any valid (safe) moves exist
 	myPossibleMoves = myPossibleMoves.Eliminate(otherSnakesPositions)
+
+	if opts.Lookahead {
+		// For each possible move, project our snake into that position
+		// and see if moves exist.  If no move exists, drop that option.
+		// This is naive because it doesn't take the moves of other snake
+		// into consideration, entirely.
+		safeMoves := CoordList{}
+		for _, pv := range myPossibleMoves {
+			nS := Solver{
+				Game:  s.Game,
+				Turn:  s.Turn + 1,
+				Board: s.Board,
+				You:   s.You.Project(pv, s.Board.Food.Contains(pv)),
+			}
+			_, err = nS.Next(SolveOptions{})
+			if err == nil {
+				// Should be safe
+				safeMoves = append(safeMoves, pv)
+			}
+		}
+		myPossibleMoves = safeMoves
+	}
 
 	if len(myPossibleMoves) == 0 {
 		// bleh. out of possibilities
