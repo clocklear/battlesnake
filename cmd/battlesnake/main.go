@@ -84,12 +84,16 @@ func HandleMove(w http.ResponseWriter, r *http.Request) {
 	var resp MoveResponse
 	possibleMoves, err := s.Next(v1.SolveOptions{
 		UseScoring: true, // enable scoring to optimize next best option
+		Lookahead:  true, // enable next-move lookahead to better assess whether thats a good option
 	})
 	if err != nil {
 		resp.Move = "up"
 		resp.Shout = negativeResponse()
 	} else {
 		resp.Move = string(randDirection(possibleMoves))
+		if rand.Intn(100) < 5 {
+			resp.Shout = neutralResponse()
+		}
 	}
 
 	fmt.Printf("GameID: %s - Move: %s\n", request.Game.ID, resp.Move)
@@ -138,6 +142,18 @@ func negativeResponse() string {
 		"good game",
 		"sayonara",
 		"eeeks",
+	}
+	return r[rand.Intn(len(r))]
+}
+
+func neutralResponse() string {
+	r := []string{
+		"here we go!",
+		"i'm coming for you",
+		"da dun dun dun",
+		"whee!",
+		"has anyone seen my coffee?",
+		"choo-choo!",
 	}
 	return r[rand.Intn(len(r))]
 }
