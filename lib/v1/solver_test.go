@@ -40,7 +40,7 @@ var opposingSnakeBoard Board = Board{
 	},
 }
 
-func TestNext(t *testing.T) {
+func TestSolverPossibleMoves(t *testing.T) {
 	testCases := []struct {
 		desc               string
 		game               Game
@@ -199,8 +199,7 @@ func TestNext(t *testing.T) {
 				assert.ErrorIs(t, err, tC.expectedError)
 				return
 			}
-			possibleDirections, _ := s.PickMove(possibleMoves)
-			assert.ElementsMatch(t, possibleDirections, tC.possibleDirections)
+			assert.ElementsMatch(t, possibleMoves.Directions(), tC.possibleDirections)
 		})
 	}
 }
