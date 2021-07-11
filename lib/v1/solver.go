@@ -87,7 +87,7 @@ func (s Solver) score(moves CoordList) CoordList {
 
 	// Sort the result
 	sort.Slice(scored, func(i, j int) bool {
-		return scored[i].Score < scored[j].Score
+		return scored[i].Score > scored[j].Score // sort descending!
 	})
 
 	return scored

@@ -203,3 +203,409 @@ func TestSolverPossibleMoves(t *testing.T) {
 		})
 	}
 }
+
+func TestSolverPickMove(t *testing.T) {
+	testCases := []struct {
+		desc          string
+		possibleMoves CoordList
+		expected      []Direction
+		expectedError error
+	}{
+		{
+			desc: "multiple possibilities, but clear winner",
+			possibleMoves: CoordList{
+				{
+					X:         5,
+					Y:         6,
+					Direction: UP,
+					Score:     7,
+				},
+				{
+					X:         4,
+					Y:         5,
+					Direction: LEFT,
+					Score:     3,
+				},
+				{
+					X:         6,
+					Y:         5,
+					Direction: RIGHT,
+					Score:     2.5,
+				},
+			},
+			expected: []Direction{UP},
+		},
+		{
+			desc: "one possibility",
+			possibleMoves: CoordList{
+				{
+					X:         6,
+					Y:         5,
+					Direction: RIGHT,
+					Score:     2.5,
+				},
+			},
+			expected: []Direction{RIGHT},
+		},
+		{
+			desc:          "no moves",
+			possibleMoves: CoordList{},
+			expectedError: ErrNoPossibleMove,
+		},
+		{
+			desc: "multiple possibilities, no clear winner",
+			possibleMoves: CoordList{
+				{
+					X:         5,
+					Y:         6,
+					Direction: UP,
+					Score:     1,
+				},
+				{
+					X:         4,
+					Y:         5,
+					Direction: LEFT,
+					Score:     3,
+				},
+				{
+					X:         6,
+					Y:         5,
+					Direction: RIGHT,
+					Score:     2.5,
+				},
+			},
+			expected: []Direction{LEFT, RIGHT},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			s := Solver{}
+			actual, err := s.PickMove(tC.possibleMoves)
+			if tC.expectedError != nil {
+				assert.ErrorIs(t, err, tC.expectedError)
+				return
+			}
+			assert.Contains(t, tC.expected, actual)
+		})
+	}
+}
+
+func TestSolverScore(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		game     Game
+		turn     int
+		board    Board
+		you      Battlesnake
+		moves    CoordList
+		expected CoordList
+	}{
+		{
+			desc:  "body length 1, no food",
+			game:  tstGame,
+			board: simpleEmptyBoard,
+			you: Battlesnake{
+				Head: Coord{
+					X: 5,
+					Y: 5,
+				},
+				Body: CoordList{
+					{
+						X: 5,
+						Y: 5,
+					},
+				},
+			},
+			moves: CoordList{
+				{
+					X:         6,
+					Y:         5,
+					Direction: RIGHT,
+				},
+				{
+					X:         4,
+					Y:         5,
+					Direction: LEFT,
+				},
+				{
+					X:         5,
+					Y:         6,
+					Direction: UP,
+				},
+				{
+					X:         5,
+					Y:         4,
+					Direction: DOWN,
+				},
+			},
+			expected: CoordList{
+				{
+					X:         6,
+					Y:         5,
+					Direction: RIGHT,
+					Score:     1,
+				},
+				{
+					X:         4,
+					Y:         5,
+					Direction: LEFT,
+					Score:     1,
+				},
+				{
+					X:         5,
+					Y:         6,
+					Direction: UP,
+					Score:     1,
+				},
+				{
+					X:         5,
+					Y:         4,
+					Direction: DOWN,
+					Score:     1,
+				},
+			},
+		},
+		{
+			desc:  "body length 5, no food",
+			game:  tstGame,
+			board: simpleEmptyBoard,
+			you: Battlesnake{
+				Head: Coord{
+					X: 5,
+					Y: 5,
+				},
+				Body: CoordList{
+					{
+						X: 5,
+						Y: 5,
+					},
+					{
+						X: 5,
+						Y: 4,
+					},
+					{
+						X: 5,
+						Y: 3,
+					},
+					{
+						X: 5,
+						Y: 2,
+					},
+					{
+						X: 5,
+						Y: 1,
+					},
+				},
+			},
+			moves: CoordList{
+				{
+					X:         6,
+					Y:         5,
+					Direction: RIGHT,
+				},
+				{
+					X:         4,
+					Y:         5,
+					Direction: LEFT,
+				},
+				{
+					X:         5,
+					Y:         6,
+					Direction: UP,
+				},
+			},
+			expected: CoordList{
+				{
+					X:         5,
+					Y:         6,
+					Direction: UP,
+					Score:     3,
+				},
+				{
+					X:         6,
+					Y:         5,
+					Direction: RIGHT,
+					Score:     2.387132965131785,
+				},
+				{
+					X:         4,
+					Y:         5,
+					Direction: LEFT,
+					Score:     2.387132965131785,
+				},
+			},
+		},
+		{
+			desc: "body length 5, food nearby but not hungry",
+			game: tstGame,
+			board: Board{
+				Height: 11,
+				Width:  11,
+				Food: CoordList{
+					{
+						X: 5,
+						Y: 6,
+					},
+				},
+			},
+			you: Battlesnake{
+				Health: 100,
+				Head: Coord{
+					X: 5,
+					Y: 5,
+				},
+				Body: CoordList{
+					{
+						X: 5,
+						Y: 5,
+					},
+					{
+						X: 5,
+						Y: 4,
+					},
+					{
+						X: 5,
+						Y: 3,
+					},
+					{
+						X: 5,
+						Y: 2,
+					},
+					{
+						X: 5,
+						Y: 1,
+					},
+				},
+			},
+			moves: CoordList{
+				{
+					X:         6,
+					Y:         5,
+					Direction: RIGHT,
+				},
+				{
+					X:         4,
+					Y:         5,
+					Direction: LEFT,
+				},
+				{
+					X:         5,
+					Y:         6,
+					Direction: UP,
+				},
+			},
+			expected: CoordList{
+				{
+					X:         6,
+					Y:         5,
+					Direction: RIGHT,
+					Score:     2.387132965131785,
+				},
+				{
+					X:         4,
+					Y:         5,
+					Direction: LEFT,
+					Score:     2.387132965131785,
+				},
+				{
+					X:         5,
+					Y:         6,
+					Direction: UP,
+					Score:     -2,
+				},
+			},
+		},
+		{
+			desc: "body length 5, food nearby and starving",
+			game: tstGame,
+			board: Board{
+				Height: 11,
+				Width:  11,
+				Food: CoordList{
+					{
+						X: 6,
+						Y: 5,
+					},
+				},
+			},
+			you: Battlesnake{
+				Health: 25,
+				Head: Coord{
+					X: 5,
+					Y: 5,
+				},
+				Body: CoordList{
+					{
+						X: 5,
+						Y: 5,
+					},
+					{
+						X: 5,
+						Y: 4,
+					},
+					{
+						X: 5,
+						Y: 3,
+					},
+					{
+						X: 5,
+						Y: 2,
+					},
+					{
+						X: 5,
+						Y: 1,
+					},
+				},
+			},
+			moves: CoordList{
+				{
+					X:         6,
+					Y:         5,
+					Direction: RIGHT,
+				},
+				{
+					X:         4,
+					Y:         5,
+					Direction: LEFT,
+				},
+				{
+					X:         5,
+					Y:         6,
+					Direction: UP,
+				},
+			},
+			expected: CoordList{
+				{
+					X:         6,
+					Y:         5,
+					Direction: RIGHT,
+					Score:     7.387132965131785,
+				},
+				{
+					X:         5,
+					Y:         6,
+					Direction: UP,
+					Score:     3,
+				},
+				{
+					X:         4,
+					Y:         5,
+					Direction: LEFT,
+					Score:     2.387132965131785,
+				},
+			},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			s := Solver{
+				Game:  tC.game,
+				Turn:  tC.turn,
+				Board: tC.board,
+				You:   tC.you,
+			}
+			scoredMoves := s.score(tC.moves)
+			assert.Equal(t, tC.expected, scoredMoves) // order is important
+		})
+	}
+}
