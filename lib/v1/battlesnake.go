@@ -1,6 +1,9 @@
 package v1
 
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+)
 
 // ErrNoPossibleMove indicates that no legal move is possible from the current position
 var ErrNoPossibleMove = fmt.Errorf("no possible moves")
@@ -16,6 +19,10 @@ const (
 
 var allDirections []Direction = []Direction{
 	UP, DOWN, LEFT, RIGHT,
+}
+
+func randDirection(d []Direction) Direction {
+	return d[rand.Intn(len(d))]
 }
 
 type Battlesnake struct {

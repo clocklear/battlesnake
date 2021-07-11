@@ -82,14 +82,15 @@ func HandleMove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resp MoveResponse
-	possibleMoves, err := s.Next(v1.SolveOptions{
+	possibleMoves, err := s.PossibleMoves(v1.SolveOptions{
 		UseScoring: true, // enable scoring to optimize next best option
 	})
+	move, err := s.PickMove(possibleMoves)
 	if err != nil {
 		resp.Move = "up"
 		resp.Shout = negativeResponse()
 	} else {
-		resp.Move = string(randDirection(possibleMoves))
+		resp.Move = string(move)
 	}
 
 	fmt.Printf("GameID: %s - Move: %s\n", request.Game.ID, resp.Move)
@@ -140,8 +141,4 @@ func negativeResponse() string {
 		"eeeks",
 	}
 	return r[rand.Intn(len(r))]
-}
-
-func randDirection(d []v1.Direction) v1.Direction {
-	return d[rand.Intn(len(d))]
 }

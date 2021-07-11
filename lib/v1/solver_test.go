@@ -193,13 +193,14 @@ func TestNext(t *testing.T) {
 				Board: tC.board,
 				You:   tC.you,
 			}
-			possibleMoves, err := s.Next(tC.opts)
+			possibleMoves, err := s.PossibleMoves(tC.opts)
 			if tC.expectedError != nil {
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, tC.expectedError)
 				return
 			}
-			assert.ElementsMatch(t, possibleMoves, tC.possibleDirections)
+			possibleDirections, _ := s.PickMove(possibleMoves)
+			assert.ElementsMatch(t, possibleDirections, tC.possibleDirections)
 		})
 	}
 }

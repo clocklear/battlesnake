@@ -13,9 +13,9 @@ type SolveOptions struct {
 	UseScoring bool
 }
 
-// Next returns a list of possible directions that could be taken next
+// PossibleMoves returns a list of possible moves that could be taken next
 // for the given game state.  An error is raised if something prevents that.
-func (s Solver) Next(opts SolveOptions) ([]Direction, error) {
+func (s Solver) PossibleMoves(opts SolveOptions) (CoordList, error) {
 
 	// Derive possible moves from given position
 	// Takes walls, hazards, own body into consideration
@@ -58,8 +58,8 @@ func (s Solver) Next(opts SolveOptions) ([]Direction, error) {
 		myPossibleMoves = s.score(myPossibleMoves).First(2)
 	}
 
-	// Return top two results as these are the best options
-	return myPossibleMoves.Directions(), nil
+	// Return the results
+	return myPossibleMoves, nil
 }
 
 func (s Solver) score(moves CoordList) CoordList {
@@ -71,6 +71,17 @@ func (s Solver) score(moves CoordList) CoordList {
 		// Find avg distance to first 8 body points
 		avgDistance := s.You.Body.First(8).AverageDistance(m)
 		m.Score = avgDistance
+
+		// Amend score by considering food
+		// If our health is above 70 and this move overlaps food, avoid it
+		isFood := s.Board.Food.Contains(m)
+		if s.You.Health >= 70 && isFood {
+			m.Score -= 5
+		}
+		// If our health is below 30 and this move overlaps food, bump it in priority
+		if s.You.Health <= 30 && isFood {
+			m.Score += 5
+		}
 		scored = append(scored, m)
 	}
 
@@ -80,4 +91,20 @@ func (s Solver) score(moves CoordList) CoordList {
 	})
 
 	return scored
+}
+
+func (s Solver) PickMove(possibleMoves CoordList) (Direction, error) {
+	switch len(possibleMoves) {
+	case 0:
+		return randDirection(allDirections), ErrNoPossibleMove
+	case 1:
+		return possibleMoves[0].Direction, nil
+	default:
+		// If the first option here is significantly stronger than the others, use it
+		if possibleMoves[0].Score-possibleMoves[1].Score >= 4 {
+			return possibleMoves[0].Direction, nil
+		}
+		// Otherwise pick randomly from first two items
+		return randDirection(possibleMoves.First(2).Directions()), nil
+	}
 }
