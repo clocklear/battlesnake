@@ -48,9 +48,12 @@ func (bs Battlesnake) PossibleMoves(b Board) (CoordList, error) {
 			continue
 		}
 		// Does it overlap with the board hazards?
-		if b.Hazards != nil && len(b.Hazards) > 0 {
-			if b.Hazards.Contains(c) {
-				continue
+		// quick change -- skip this check if health is greater than 30
+		if bs.Health <= 30 {
+			if b.Hazards != nil && len(b.Hazards) > 0 {
+				if b.Hazards.Contains(c) {
+					continue
+				}
 			}
 		}
 		// Looks like a valid move
@@ -72,4 +75,13 @@ func (bs Battlesnake) Project(loc Coord, willGrow bool) Battlesnake {
 		bs.Body = bs.Body[:len(bs.Body)-1]
 	}
 	return bs
+}
+
+// IsValid determines if the snake is 'valid' on the given board.
+// Valid snakes:
+// * have possible moves
+// * have non-zero health
+func (bs Battlesnake) IsValid(b Board) bool {
+	_, err := bs.PossibleMoves(b)
+	return err == nil && bs.Health > 0
 }
