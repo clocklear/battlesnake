@@ -16,19 +16,19 @@ import (
 )
 
 type config struct {
-	Addr         string        `default:":8080"`
+	Addr         string        `default:":8080" split_words:"true"`
 	ReadTimeout  time.Duration `default:"5s" required:"true" split_words:"true"`
 	WriteTimeout time.Duration `default:"5s" required:"true" split_words:"true"`
 	NewRelic     struct {
-		AppName    string `default:"battlesnake-server"`
-		Enabled    bool   `default:"true"`
-		LicenseKey string
-	}
+		AppName    string `default:"battlesnake-server" split_words:"true"`
+		Enabled    bool   `default:"true" split_words:"true"`
+		LicenseKey string `split_words:"true"`
+	} `split_words:"true"`
 	Recorder struct {
-		OutputPath        string        `default:""`
-		MaxAgeBeforePrune time.Duration `default:"2m"`
-		PruneInterval     time.Duration `default:"1m"`
-	}
+		OutputPath        string        `default:"" split_words:"true"`
+		MaxAgeBeforePrune time.Duration `default:"2m" split_words:"true"`
+		PruneInterval     time.Duration `default:"1m" split_words:"true"`
+	} `split_words:"true"`
 }
 
 func main() {
