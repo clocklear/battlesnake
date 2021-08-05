@@ -49,11 +49,9 @@ func (bs Battlesnake) PossibleMoves(b Board) (CoordList, error) {
 		}
 		// Does it overlap with the board hazards?
 		// quick change -- skip this check if health is greater than 30
-		if bs.Health <= 30 {
-			if b.Hazards != nil && len(b.Hazards) > 0 {
-				if b.Hazards.Contains(c) {
-					continue
-				}
+		if b.Hazards != nil && len(b.Hazards) > 0 {
+			if b.Hazards.Contains(c) {
+				continue
 			}
 		}
 		// Looks like a valid move

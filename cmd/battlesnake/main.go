@@ -47,6 +47,7 @@ func main() {
 	// Create new relic agent
 	var nr *newrelic.Application
 	if c.NewRelic.Enabled && c.NewRelic.LicenseKey != "" {
+		l.Info("booting new relic agent", "appName", c.NewRelic.AppName)
 		nr, err = newrelic.NewApplication(
 			newrelic.ConfigAppName(c.NewRelic.AppName),
 			newrelic.ConfigDistributedTracerEnabled(true),
