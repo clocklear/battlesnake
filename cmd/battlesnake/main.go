@@ -20,6 +20,7 @@ type config struct {
 	ReadTimeout  time.Duration `default:"5s" required:"true" split_words:"true"`
 	WriteTimeout time.Duration `default:"5s" required:"true" split_words:"true"`
 	Recorder     struct {
+		Enabled           bool          `default:"true" split_words:"true"`
 		OutputPath        string        `default:"" split_words:"true"`
 		MaxAgeBeforePrune time.Duration `default:"2m" split_words:"true"`
 		PruneInterval     time.Duration `default:"1m" split_words:"true"`
@@ -49,10 +50,15 @@ func main() {
 	}
 
 	// Create gamerecorder
-	gr := gamerecorder.NewFileArchive(
-		c.Recorder.OutputPath,
-		c.Recorder.PruneInterval,
-		c.Recorder.MaxAgeBeforePrune)
+	var gr gamerecorder.GameRecorder
+	if c.Recorder.Enabled {
+		gr = gamerecorder.NewFileArchive(
+			c.Recorder.OutputPath,
+			c.Recorder.PruneInterval,
+			c.Recorder.MaxAgeBeforePrune)
+	} else {
+		gr = gamerecorder.NoopGameRecorder{}
+	}
 
 	// Create handler
 	h := handler{
