@@ -19,12 +19,7 @@ type config struct {
 	Addr         string        `default:":8080" split_words:"true"`
 	ReadTimeout  time.Duration `default:"5s" required:"true" split_words:"true"`
 	WriteTimeout time.Duration `default:"5s" required:"true" split_words:"true"`
-	NewRelic     struct {
-		AppName    string `default:"battlesnake-server" split_words:"true"`
-		Enabled    bool   `default:"true" split_words:"true"`
-		LicenseKey string `split_words:"true"`
-	} `split_words:"true"`
-	Recorder struct {
+	Recorder     struct {
 		OutputPath        string        `default:"" split_words:"true"`
 		MaxAgeBeforePrune time.Duration `default:"2m" split_words:"true"`
 		PruneInterval     time.Duration `default:"1m" split_words:"true"`
@@ -46,16 +41,11 @@ func main() {
 
 	// Create new relic agent
 	var nr *newrelic.Application
-	if c.NewRelic.Enabled && c.NewRelic.LicenseKey != "" {
-		l.Info("booting new relic agent", "appName", c.NewRelic.AppName)
-		nr, err = newrelic.NewApplication(
-			newrelic.ConfigAppName(c.NewRelic.AppName),
-			newrelic.ConfigDistributedTracerEnabled(true),
-			newrelic.ConfigLicense(c.NewRelic.LicenseKey),
-		)
-		if err != nil {
-			l.Fatal("failed to create new relic", "err", err.Error())
-		}
+	nr, err = newrelic.NewApplication(
+		newrelic.ConfigFromEnvironment(),
+	)
+	if err != nil {
+		l.Fatal("failed to create new relic", "err", err.Error())
 	}
 
 	// Create gamerecorder
@@ -95,7 +85,12 @@ func main() {
 		os.Exit(1)
 	case s := <-osSignals:
 		l.Info("received signal", "signal", s)
+
+		// Shutdown supporting constructs
 		nr.Shutdown(time.Second * 5)
+		fa := gr.(*gamerecorder.FileArchive)
+		fa.Shutdown()
+
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		l.Info("stopping battlesnake server")
 		if err := appServer.Shutdown(ctx); err != nil {

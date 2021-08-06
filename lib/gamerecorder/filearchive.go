@@ -105,7 +105,13 @@ func (r *FileArchive) Move(ctx context.Context, req v1.GameRequest, move string)
 	key := gameKey(req)
 	g, validGame := r.games[key]
 	if !validGame {
-		return fmt.Errorf("invalid game")
+		// C. Locklear -- sometimes we don't get a start request and move is invoked immediately
+		// Just start a game
+		err := r.Start(ctx, req)
+		if err != nil {
+			return err
+		}
+		g = r.games[key]
 	}
 	g.Decisions = append(g.Decisions, decision{
 		BoardState: req.ToBoardState(),
