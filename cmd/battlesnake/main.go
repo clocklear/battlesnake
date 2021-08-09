@@ -94,8 +94,9 @@ func main() {
 
 		// Shutdown supporting constructs
 		nr.Shutdown(time.Second * 5)
-		fa := gr.(*gamerecorder.FileArchive)
-		fa.Shutdown()
+		if fa, isFileArchive := gr.(*gamerecorder.FileArchive); isFileArchive {
+			_ = fa.Shutdown()
+		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		l.Info("stopping battlesnake server")
