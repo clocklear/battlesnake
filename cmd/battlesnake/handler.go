@@ -15,6 +15,7 @@ type handler struct {
 	rec gamerecorder.GameRecorder
 	l   logger
 	nr  *newrelic.Application
+	so  v1.SolveOptions
 }
 
 type BattlesnakeInfoResponse struct {
@@ -82,10 +83,7 @@ func (h *handler) move(w http.ResponseWriter, r *http.Request) {
 	s := v1.Solver(request)
 
 	var resp moveResponse
-	possibleMoves, err := s.Next(v1.SolveOptions{
-		UseScoring: true, // enable scoring to optimize next best option
-		Lookahead:  true, // enable next-move lookahead to better assess whether thats a good option
-	})
+	possibleMoves, err := s.Next(h.so)
 	var move string
 	if err != nil {
 		resp.Move = "up"
