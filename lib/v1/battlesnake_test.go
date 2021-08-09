@@ -219,7 +219,7 @@ func TestPossibleMoves(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			actual, err := tC.s.PossibleMoves(tC.b)
+			actual, err := tC.s.PossibleMoves(tC.b, SolveOptions{})
 			if tC.expectedError != nil {
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, tC.expectedError)

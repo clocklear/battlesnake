@@ -33,12 +33,16 @@ type Battlesnake struct {
 // position and the provided board.  It takes the board
 // bounds and hazards into consideration.  An error
 // will the thrown if no moves are possible.
-func (bs Battlesnake) PossibleMoves(b Board) (CoordList, error) {
+func (bs Battlesnake) PossibleMoves(b Board, opts SolveOptions) (CoordList, error) {
 	cl := CoordList{}
 	// for each direction..
 	for _, d := range allDirections {
 		// ..project the head that way
 		c := bs.Head.Project(d)
+
+		// Give the move a base score of 50
+		c.Score = 50
+
 		// Does it fit on the board?
 		if !c.WithinBounds(b) {
 			continue
@@ -47,11 +51,19 @@ func (bs Battlesnake) PossibleMoves(b Board) (CoordList, error) {
 		if bs.Body.Contains(c) {
 			continue
 		}
+		// Does it overlap with food?  Reward!
+		if b.Food != nil && len(b.Food) > 0 {
+			if b.Food.Contains(c) {
+				// Improve the score of food moves
+				c.Score += 20
+			}
+		}
+
 		// Does it overlap with the board hazards?
-		// quick change -- skip this check if health is greater than 30
 		if b.Hazards != nil && len(b.Hazards) > 0 {
 			if b.Hazards.Contains(c) {
-				continue
+				// Reduce the score of hazard moves
+				c.Score -= 40
 			}
 		}
 		// Looks like a valid move
@@ -80,6 +92,6 @@ func (bs Battlesnake) Project(loc Coord, willGrow bool) Battlesnake {
 // * have possible moves
 // * have non-zero health
 func (bs Battlesnake) IsValid(b Board) bool {
-	_, err := bs.PossibleMoves(b)
+	_, err := bs.PossibleMoves(b, SolveOptions{})
 	return err == nil && bs.Health > 0
 }

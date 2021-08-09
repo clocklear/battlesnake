@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/clocklear/battlesnake/lib/gamerecorder"
+	v1 "github.com/clocklear/battlesnake/lib/v1"
 	"github.com/newrelic/go-agent/v3/newrelic"
 
 	"github.com/go-kit/kit/log"
@@ -24,6 +25,14 @@ type config struct {
 		OutputPath        string        `default:"" split_words:"true"`
 		MaxAgeBeforePrune time.Duration `default:"2m" split_words:"true"`
 		PruneInterval     time.Duration `default:"1m" split_words:"true"`
+	} `split_words:"true"`
+	SolveOption struct {
+		UseScoring               bool `default:"true" split_words:"true"`
+		Lookahead                bool `default:"true" split_words:"true"`
+		ConsiderOpponentNextMove bool `default:"true" split_words:"true"`
+		UseSingleBestOption      bool `default:"false" split_words:"true"`
+		FoodReward               int  `default:"20" split_words:"true"`
+		HazardPenalty            int  `default:"40" split_words:"true"`
 	} `split_words:"true"`
 }
 
@@ -65,6 +74,7 @@ func main() {
 		l:   l,
 		rec: gr,
 		nr:  nr,
+		so:  v1.SolveOptions(c.SolveOption),
 	}
 
 	// Create http server
@@ -95,7 +105,7 @@ func main() {
 		// Shutdown supporting constructs
 		nr.Shutdown(time.Second * 5)
 		fa := gr.(*gamerecorder.FileArchive)
-		fa.Shutdown()
+		_ = fa.Shutdown()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		l.Info("stopping battlesnake server")

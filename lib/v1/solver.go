@@ -10,8 +10,12 @@ type Solver struct {
 }
 
 type SolveOptions struct {
-	UseScoring bool
-	Lookahead  bool
+	UseScoring               bool
+	Lookahead                bool
+	ConsiderOpponentNextMove bool
+	UseSingleBestOption      bool
+	FoodReward               int
+	HazardPenalty            int
 }
 
 // Next returns a list of possible directions that could be taken next
@@ -20,7 +24,7 @@ func (s Solver) Next(opts SolveOptions) ([]Direction, error) {
 
 	// Derive possible moves from given position
 	// Takes walls, hazards, own body into consideration
-	myPossibleMoves, err := s.You.PossibleMoves(s.Board)
+	myPossibleMoves, err := s.You.PossibleMoves(s.Board, opts)
 	if err != nil {
 		// bleh. Nothing to do.
 		return nil, err
@@ -37,13 +41,15 @@ func (s Solver) Next(opts SolveOptions) ([]Direction, error) {
 		// Gather position of this snakes body pieces
 		otherSnakesPositions = append(otherSnakesPositions, snake.Body...)
 
-		// Determine possible moves of this snake
-		pm, err := snake.PossibleMoves(s.Board)
-		if err != nil {
-			// snakes next moves is not a threat -- has no valid moves
-			continue
+		if opts.ConsiderOpponentNextMove {
+			// Determine possible moves of this snake
+			pm, err := snake.PossibleMoves(s.Board, opts)
+			if err != nil {
+				// snakes next moves is not a threat -- has no valid moves
+				continue
+			}
+			otherSnakesPositions = append(otherSnakesPositions, pm...)
 		}
-		otherSnakesPositions = append(otherSnakesPositions, pm...)
 	}
 
 	// Determine if any valid (safe) moves exist
@@ -81,6 +87,10 @@ func (s Solver) Next(opts SolveOptions) ([]Direction, error) {
 		myPossibleMoves = s.score(myPossibleMoves).First(2)
 	}
 
+	if opts.UseSingleBestOption {
+		myPossibleMoves = myPossibleMoves.First(1)
+	}
+
 	// Return top two results as these are the best options
 	return myPossibleMoves.Directions(), nil
 }
@@ -90,10 +100,10 @@ func (s Solver) score(moves CoordList) CoordList {
 	// based on score, and return
 	scored := CoordList{}
 	for _, m := range moves {
-		// Score by avoiding self
+		// Adjust scores by avoiding self
 		// Find avg distance to first 8 body points
 		avgDistance := s.You.Body.First(8).AverageDistance(m)
-		m.Score = avgDistance
+		m.Score += avgDistance
 		scored = append(scored, m)
 	}
 
