@@ -10,7 +10,11 @@ type Solver struct {
 }
 
 type SolveOptions struct {
-	UseScoring bool
+	Lookahead                bool
+	ConsiderOpponentNextMove bool
+	UseSingleBestOption      bool
+	FoodReward               int
+	HazardPenalty            int
 }
 
 // PossibleMoves returns a list of possible moves that could be taken next
@@ -19,7 +23,7 @@ func (s Solver) PossibleMoves(opts SolveOptions) (CoordList, error) {
 
 	// Derive possible moves from given position
 	// Takes walls, hazards, own body into consideration
-	myPossibleMoves, err := s.You.PossibleMoves(s.Board)
+	myPossibleMoves, err := s.You.PossibleMoves(s.Board, opts)
 	if err != nil {
 		// bleh. Nothing to do.
 		return nil, err
@@ -36,29 +40,55 @@ func (s Solver) PossibleMoves(opts SolveOptions) (CoordList, error) {
 		// Gather position of this snakes body pieces
 		otherSnakesPositions = append(otherSnakesPositions, snake.Body...)
 
-		// Determine possible moves of this snake
-		pm, err := snake.PossibleMoves(s.Board)
-		if err != nil {
-			// snakes next moves is not a threat -- has no valid moves
-			continue
+		if opts.ConsiderOpponentNextMove {
+			// Determine possible moves of this snake
+			pm, err := snake.PossibleMoves(s.Board, opts)
+			if err != nil {
+				// snakes next moves is not a threat -- has no valid moves
+				continue
+			}
+			otherSnakesPositions = append(otherSnakesPositions, pm...)
 		}
-		otherSnakesPositions = append(otherSnakesPositions, pm...)
 	}
 
 	// Determine if any valid (safe) moves exist
 	myPossibleMoves = myPossibleMoves.Eliminate(otherSnakesPositions)
+
+	if opts.Lookahead {
+		// For each possible move, project our snake into that position
+		// and see if moves exist.  If no move exists, drop that option.
+		// This is naive because it doesn't take the moves of other snake
+		// into consideration, entirely.
+		safeMoves := CoordList{}
+		for _, pv := range myPossibleMoves {
+			nS := Solver{
+				Game:  s.Game,
+				Turn:  s.Turn + 1,
+				Board: s.Board,
+				You:   s.You.Project(pv, s.Board.Food.Contains(pv)),
+			}
+			_, err = nS.PossibleMoves(SolveOptions{})
+			if err == nil {
+				// Should be safe
+				safeMoves = append(safeMoves, pv)
+			}
+		}
+		myPossibleMoves = safeMoves
+	}
 
 	if len(myPossibleMoves) == 0 {
 		// bleh. out of possibilities
 		return nil, ErrNoPossibleMove
 	}
 
-	if opts.UseScoring {
-		// Score the results
-		myPossibleMoves = s.score(myPossibleMoves).First(2)
+	// Score the results
+	// Return top two results as these are the best options
+	myPossibleMoves = s.score(myPossibleMoves).First(2)
+
+	if opts.UseSingleBestOption {
+		myPossibleMoves = myPossibleMoves.First(1)
 	}
 
-	// Return the results
 	return myPossibleMoves, nil
 }
 
@@ -67,10 +97,10 @@ func (s Solver) score(moves CoordList) CoordList {
 	// based on score, and return
 	scored := CoordList{}
 	for _, m := range moves {
-		// Score by avoiding self
+		// Adjust scores by avoiding self
 		// Find avg distance to first 8 body points
 		avgDistance := s.You.Body.First(8).AverageDistance(m)
-		m.Score = avgDistance
+		m.Score += avgDistance
 
 		// Amend score by considering food
 		// If our health is above 70 and this move overlaps food, avoid it
@@ -82,6 +112,7 @@ func (s Solver) score(moves CoordList) CoordList {
 		if s.You.Health <= 30 && isFood {
 			m.Score += 5
 		}
+
 		scored = append(scored, m)
 	}
 

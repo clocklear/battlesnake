@@ -9,6 +9,7 @@ EXPOSE 8080
 
 FROM scratch
 
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=build /go/src/battlesnake /usr/bin/battlesnake
 
 CMD ["battlesnake"]

@@ -1,144 +1,121 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"log"
-	"math/rand"
+	"context"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
+	"github.com/clocklear/battlesnake/lib/gamerecorder"
 	v1 "github.com/clocklear/battlesnake/lib/v1"
+	"github.com/newrelic/go-agent/v3/newrelic"
+
+	"github.com/go-kit/kit/log"
+	"github.com/kelseyhightower/envconfig"
 )
 
-type BattlesnakeInfoResponse struct {
-	APIVersion string `json:"apiversion"`
-	Author     string `json:"author"`
-	Color      string `json:"color"`
-	Head       string `json:"head"`
-	Tail       string `json:"tail"`
-}
-
-type GameRequest struct {
-	Game  v1.Game        `json:"game"`
-	Turn  int            `json:"turn"`
-	Board v1.Board       `json:"board"`
-	You   v1.Battlesnake `json:"you"`
-}
-
-type MoveResponse struct {
-	Move  string `json:"move"`
-	Shout string `json:"shout,omitempty"`
-}
-
-// HandleIndex is called when your Battlesnake is created and refreshed
-// by play.battlesnake.com. BattlesnakeInfoResponse contains information about
-// your Battlesnake, including what it should look like on the game board.
-func HandleIndex(w http.ResponseWriter, r *http.Request) {
-	response := BattlesnakeInfoResponse{
-		APIVersion: "1",
-		Author:     "clocklear",
-		Color:      "#238270",
-		Head:       "silly",
-		Tail:       "coffee",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(response)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-// HandleStart is called at the start of each game your Battlesnake is playing.
-// The GameRequest object contains information about the game that's about to start.
-// TODO: Use this function to decide how your Battlesnake is going to look on the board.
-func HandleStart(w http.ResponseWriter, r *http.Request) {
-	request := GameRequest{}
-	err := json.NewDecoder(r.Body).Decode(&request)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Nothing to respond with here
-	fmt.Print("START\n")
-}
-
-// HandleMove is called for each turn of each game.
-// Valid responses are "up", "down", "left", or "right".
-func HandleMove(w http.ResponseWriter, r *http.Request) {
-	request := GameRequest{}
-	err := json.NewDecoder(r.Body).Decode(&request)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create a solver and use it to determine what we do next
-	s := v1.Solver{
-		Game:  request.Game,
-		Turn:  request.Turn,
-		Board: request.Board,
-		You:   request.You,
-	}
-
-	var resp MoveResponse
-	possibleMoves, err := s.PossibleMoves(v1.SolveOptions{
-		UseScoring: true, // enable scoring to optimize next best option
-	})
-	move, err := s.PickMove(possibleMoves)
-	if err != nil {
-		resp.Move = "up"
-		resp.Shout = negativeResponse()
-	} else {
-		resp.Move = string(move)
-	}
-
-	fmt.Printf("GameID: %s - Move: %s\n", request.Game.ID, resp.Move)
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-// HandleEnd is called when a game your Battlesnake was playing has ended.
-// It's purely for informational purposes, no response required.
-func HandleEnd(w http.ResponseWriter, r *http.Request) {
-	request := GameRequest{}
-	err := json.NewDecoder(r.Body).Decode(&request)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Nothing to respond with here
-	fmt.Print("END\n")
+type config struct {
+	Addr         string        `default:":8080" split_words:"true"`
+	ReadTimeout  time.Duration `default:"5s" required:"true" split_words:"true"`
+	WriteTimeout time.Duration `default:"5s" required:"true" split_words:"true"`
+	Recorder     struct {
+		Enabled           bool          `default:"true" split_words:"true"`
+		OutputPath        string        `default:"" split_words:"true"`
+		MaxAgeBeforePrune time.Duration `default:"2m" split_words:"true"`
+		PruneInterval     time.Duration `default:"1m" split_words:"true"`
+	} `split_words:"true"`
+	SolveOption struct {
+		Lookahead                bool `default:"true" split_words:"true"`
+		ConsiderOpponentNextMove bool `default:"true" split_words:"true"`
+		UseSingleBestOption      bool `default:"false" split_words:"true"`
+		FoodReward               int  `default:"20" split_words:"true"`
+		HazardPenalty            int  `default:"40" split_words:"true"`
+	} `split_words:"true"`
 }
 
 func main() {
-	port := os.Getenv("PORT")
-	if len(port) == 0 {
-		port = "8080"
+	// Create our logger
+	base := log.NewJSONLogger(os.Stdout)
+	base = log.WithPrefix(base, "date", log.DefaultTimestampUTC)
+	l := logger{base: base}
+
+	// Parse our configuration and make sure we have everything that we need.
+	var c config
+	err := envconfig.Process("", &c)
+	if err != nil {
+		l.Fatal("could not process env", "err", err.Error())
 	}
 
-	http.HandleFunc("/", HandleIndex)
-	http.HandleFunc("/start", HandleStart)
-	http.HandleFunc("/move", HandleMove)
-	http.HandleFunc("/end", HandleEnd)
-
-	fmt.Printf("Starting Battlesnake Server at http://0.0.0.0:%s...\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
-}
-
-func negativeResponse() string {
-	r := []string{
-		"oh crap",
-		"bummer",
-		"ouch",
-		"whoops",
-		"dangit",
-		"good game",
-		"sayonara",
-		"eeeks",
+	// Create new relic agent
+	var nr *newrelic.Application
+	nr, err = newrelic.NewApplication(
+		newrelic.ConfigFromEnvironment(),
+	)
+	if err != nil {
+		l.Fatal("failed to create new relic", "err", err.Error())
 	}
-	return r[rand.Intn(len(r))]
+
+	// Create gamerecorder
+	var gr gamerecorder.GameRecorder
+	if c.Recorder.Enabled {
+		gr = gamerecorder.NewFileArchive(
+			c.Recorder.OutputPath,
+			c.Recorder.PruneInterval,
+			c.Recorder.MaxAgeBeforePrune)
+	} else {
+		gr = gamerecorder.NoopGameRecorder{}
+	}
+
+	// Create handler
+	h := handler{
+		l:   l,
+		rec: gr,
+		nr:  nr,
+		so:  v1.SolveOptions(c.SolveOption),
+	}
+
+	// Create http server
+	appServer := http.Server{
+		Addr:         c.Addr,
+		Handler:      router(&h),
+		ReadTimeout:  c.ReadTimeout,
+		WriteTimeout: c.WriteTimeout,
+	}
+
+	// Create a channel to listen for http shutdown errors
+	errs := make(chan error, 1)
+	go func() {
+		l.Info("starting battlesnake server", "addr", c.Addr)
+		errs <- appServer.ListenAndServe()
+	}()
+
+	// Listen for stopping signals, and attempt to shut down gracefully.
+	osSignals := make(chan os.Signal, 1)
+	signal.Notify(osSignals, syscall.SIGINT, syscall.SIGTERM)
+	select {
+	case err := <-errs:
+		l.Fatal("received error", "err", err.Error())
+		os.Exit(1)
+	case s := <-osSignals:
+		l.Info("received signal", "signal", s)
+
+		// Shutdown supporting constructs
+		nr.Shutdown(time.Second * 5)
+		if fa, isFileArchive := gr.(*gamerecorder.FileArchive); isFileArchive {
+			_ = fa.Shutdown()
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		l.Info("stopping battlesnake server")
+		if err := appServer.Shutdown(ctx); err != nil {
+			l.Error("could not shutdown battlesnake server", "err", err.Error())
+			if err := appServer.Close(); err != nil {
+				l.Error("could not close battlesnake server", "err", err.Error())
+			}
+		}
+		cancel()
+		os.Exit(0)
+	}
 }
