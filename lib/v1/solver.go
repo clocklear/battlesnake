@@ -10,7 +10,6 @@ type Solver struct {
 }
 
 type SolveOptions struct {
-	UseScoring               bool
 	Lookahead                bool
 	ConsiderOpponentNextMove bool
 	UseSingleBestOption      bool
@@ -18,13 +17,21 @@ type SolveOptions struct {
 	HazardPenalty            int
 }
 
-// Next returns a list of possible directions that could be taken next
+var DefaultSolveOptions SolveOptions = SolveOptions{
+	Lookahead:                true,
+	ConsiderOpponentNextMove: true,
+	UseSingleBestOption:      false,
+	FoodReward:               20,
+	HazardPenalty:            40,
+}
+
+// PossibleMoves returns a list of possible moves that could be taken next
 // for the given game state.  An error is raised if something prevents that.
-func (s Solver) Next(opts SolveOptions) ([]Direction, error) {
+func (s Solver) PossibleMoves(opts SolveOptions) (CoordList, error) {
 
 	// Derive possible moves from given position
 	// Takes walls, hazards, own body into consideration
-	myPossibleMoves, err := s.You.PossibleMoves(s.Board, opts)
+	myPossibleMoves, err := s.You.PossibleMoves(s.Board)
 	if err != nil {
 		// bleh. Nothing to do.
 		return nil, err
@@ -43,7 +50,7 @@ func (s Solver) Next(opts SolveOptions) ([]Direction, error) {
 
 		if opts.ConsiderOpponentNextMove {
 			// Determine possible moves of this snake
-			pm, err := snake.PossibleMoves(s.Board, opts)
+			pm, err := snake.PossibleMoves(s.Board)
 			if err != nil {
 				// snakes next moves is not a threat -- has no valid moves
 				continue
@@ -62,14 +69,8 @@ func (s Solver) Next(opts SolveOptions) ([]Direction, error) {
 		// into consideration, entirely.
 		safeMoves := CoordList{}
 		for _, pv := range myPossibleMoves {
-			nS := Solver{
-				Game:  s.Game,
-				Turn:  s.Turn + 1,
-				Board: s.Board,
-				You:   s.You.Project(pv, s.Board.Food.Contains(pv)),
-			}
-			_, err = nS.Next(SolveOptions{})
-			if err == nil {
+			nS := s.You.Project(pv, s.Board)
+			if nS.IsValid(s.Board) {
 				// Should be safe
 				safeMoves = append(safeMoves, pv)
 			}
@@ -82,20 +83,13 @@ func (s Solver) Next(opts SolveOptions) ([]Direction, error) {
 		return nil, ErrNoPossibleMove
 	}
 
-	if opts.UseScoring {
-		// Score the results
-		myPossibleMoves = s.score(myPossibleMoves).First(2)
-	}
+	// Score the results
+	myPossibleMoves = s.score(myPossibleMoves, opts)
 
-	if opts.UseSingleBestOption {
-		myPossibleMoves = myPossibleMoves.First(1)
-	}
-
-	// Return top two results as these are the best options
-	return myPossibleMoves.Directions(), nil
+	return myPossibleMoves, nil
 }
 
-func (s Solver) score(moves CoordList) CoordList {
+func (s Solver) score(moves CoordList, opts SolveOptions) CoordList {
 	// Given the list of possible moves, 'score' each one, sort the list
 	// based on score, and return
 	scored := CoordList{}
@@ -104,13 +98,56 @@ func (s Solver) score(moves CoordList) CoordList {
 		// Find avg distance to first 8 body points
 		avgDistance := s.You.Body.First(8).AverageDistance(m)
 		m.Score += avgDistance
+
+		// Amend score by considering food
+		// If our health is above 70 and this move overlaps food, avoid it
+		isFood := s.Board.Food.Contains(m)
+		if s.You.Health >= 70 && isFood {
+			m.Score -= float64(opts.FoodReward)
+		}
+		// If our health is below 30 and this move overlaps food, bump it in priority
+		if s.You.Health <= 30 && isFood {
+			m.Score += float64(opts.FoodReward)
+		}
+
+		// Consider board hazards
+		if s.Board.Hazards != nil && len(s.Board.Hazards) > 0 {
+			if s.Board.Hazards.Contains(m) {
+				m.Score -= float64(opts.HazardPenalty)
+			}
+		}
+
 		scored = append(scored, m)
 	}
 
 	// Sort the result
-	sort.Slice(scored, func(i, j int) bool {
-		return scored[i].Score < scored[j].Score
-	})
+	scoreSort(scored)
 
 	return scored
+}
+
+func scoreSort(c CoordList) {
+	sort.Slice(c, func(i, j int) bool {
+		return c[i].Score > c[j].Score // sort descending!
+	})
+}
+
+func (s Solver) PickMove(possibleMoves CoordList, opts SolveOptions) (Direction, error) {
+	switch len(possibleMoves) {
+	case 0:
+		return randDirection(allDirections), ErrNoPossibleMove
+	case 1:
+		return possibleMoves[0].Direction, nil
+	default:
+		scoreSort(possibleMoves)
+		if opts.UseSingleBestOption {
+			return possibleMoves[0].Direction, nil
+		}
+		// If the first option here is significantly stronger than the others, use it
+		if possibleMoves[0].Score-possibleMoves[1].Score >= 4 {
+			return possibleMoves[0].Direction, nil
+		}
+		// Otherwise pick randomly from first two items
+		return randDirection(possibleMoves.First(2).Directions()), nil
+	}
 }

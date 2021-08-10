@@ -126,7 +126,7 @@ func TestPossibleMoves(t *testing.T) {
 			},
 		},
 		{
-			desc: "failure, no moves due to walls, body, and hazards (bottom left)",
+			desc: "failure, no moves due to walls and body (bottom left)",
 			s: Battlesnake{
 				Head: Coord{
 					X: 0,
@@ -140,6 +140,14 @@ func TestPossibleMoves(t *testing.T) {
 					{
 						X: 0,
 						Y: 1,
+					},
+					{
+						X: 1,
+						Y: 1,
+					},
+					{
+						X: 1,
+						Y: 0,
 					},
 				},
 			},
@@ -187,7 +195,7 @@ func TestPossibleMoves(t *testing.T) {
 			},
 		},
 		{
-			desc: "failure, no moves due to walls, body, and hazards (top right)",
+			desc: "failure, no moves due to walls and body",
 			s: Battlesnake{
 				Head: Coord{
 					X: 10,
@@ -201,6 +209,14 @@ func TestPossibleMoves(t *testing.T) {
 					{
 						X: 10,
 						Y: 9,
+					},
+					{
+						X: 9,
+						Y: 9,
+					},
+					{
+						X: 9,
+						Y: 10,
 					},
 				},
 			},
@@ -219,7 +235,7 @@ func TestPossibleMoves(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			actual, err := tC.s.PossibleMoves(tC.b, SolveOptions{})
+			actual, err := tC.s.PossibleMoves(tC.b)
 			if tC.expectedError != nil {
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, tC.expectedError)

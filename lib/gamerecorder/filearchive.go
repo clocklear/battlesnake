@@ -21,7 +21,7 @@ type FileArchive struct {
 	maxAgeBeforePrune time.Duration
 	pruneInterval     time.Duration
 	quit              chan int
-	mu                sync.Mutex
+	mu                sync.RWMutex
 }
 
 type decision struct {
@@ -69,11 +69,13 @@ func (r *FileArchive) pruneloop() {
 
 func (r *FileArchive) prune() {
 	gameIds := []string{}
+	r.mu.RLock()
 	for gameId, g := range r.games {
 		if g.expiration <= time.Now().UnixNano() {
 			gameIds = append(gameIds, gameId)
 		}
 	}
+	r.mu.RUnlock()
 	if len(gameIds) == 0 {
 		return
 	}
@@ -103,7 +105,9 @@ func (r *FileArchive) Start(ctx context.Context, req v1.GameRequest) error {
 
 func (r *FileArchive) Move(ctx context.Context, req v1.GameRequest, move string) error {
 	key := gameKey(req)
+	r.mu.RLock()
 	g, validGame := r.games[key]
+	r.mu.RUnlock()
 	if !validGame {
 		// C. Locklear -- sometimes we don't get a start request and move is invoked immediately
 		// Just start a game
@@ -111,7 +115,9 @@ func (r *FileArchive) Move(ctx context.Context, req v1.GameRequest, move string)
 		if err != nil {
 			return err
 		}
+		r.mu.RLock()
 		g = r.games[key]
+		r.mu.RUnlock()
 	}
 	g.Decisions = append(g.Decisions, decision{
 		BoardState: req.ToBoardState(),
@@ -124,7 +130,9 @@ func (r *FileArchive) Move(ctx context.Context, req v1.GameRequest, move string)
 }
 
 func (r *FileArchive) End(ctx context.Context, req v1.GameRequest) error {
+	r.mu.RLock()
 	g, validGame := r.games[gameKey(req)]
+	r.mu.RUnlock()
 	if !validGame {
 		return fmt.Errorf("invalid game")
 	}

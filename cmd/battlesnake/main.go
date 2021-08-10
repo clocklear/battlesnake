@@ -27,12 +27,17 @@ type config struct {
 		PruneInterval     time.Duration `default:"1m" split_words:"true"`
 	} `split_words:"true"`
 	SolveOption struct {
-		UseScoring               bool `default:"true" split_words:"true"`
 		Lookahead                bool `default:"true" split_words:"true"`
 		ConsiderOpponentNextMove bool `default:"true" split_words:"true"`
 		UseSingleBestOption      bool `default:"false" split_words:"true"`
 		FoodReward               int  `default:"20" split_words:"true"`
 		HazardPenalty            int  `default:"40" split_words:"true"`
+	} `split_words:"true"`
+	Logger struct {
+		Enabled bool `default:"true" split_words:"true"`
+	}
+	NewRelic struct {
+		LicenseKey string `split_words:"true"`
 	} `split_words:"true"`
 }
 
@@ -49,13 +54,21 @@ func main() {
 		l.Fatal("could not process env", "err", err.Error())
 	}
 
+	if !c.Logger.Enabled {
+		l = logger{
+			base: log.NewNopLogger(),
+		}
+	}
+
 	// Create new relic agent
 	var nr *newrelic.Application
-	nr, err = newrelic.NewApplication(
-		newrelic.ConfigFromEnvironment(),
-	)
-	if err != nil {
-		l.Fatal("failed to create new relic", "err", err.Error())
+	if c.NewRelic.LicenseKey != "" {
+		nr, err = newrelic.NewApplication(
+			newrelic.ConfigFromEnvironment(),
+		)
+		if err != nil {
+			l.Fatal("failed to create new relic", "err", err.Error())
+		}
 	}
 
 	// Create gamerecorder
