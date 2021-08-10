@@ -16,30 +16,6 @@ var simpleEmptyBoard Board = Board{
 	Width:  11,
 }
 
-var opposingSnakeBoard Board = Board{
-	Height: 11,
-	Width:  11,
-	Snakes: []Battlesnake{
-		{
-			ID: "not-you",
-			Head: Coord{
-				X: 1,
-				Y: 1,
-			},
-			Body: CoordList{
-				{
-					X: 1,
-					Y: 1,
-				},
-				{
-					X: 1,
-					Y: 0,
-				},
-			},
-		},
-	},
-}
-
 func TestSolverPossibleMoves(t *testing.T) {
 	testCases := []struct {
 		desc               string
@@ -119,63 +95,6 @@ func TestSolverPossibleMoves(t *testing.T) {
 					{
 						X: 1,
 						Y: 0,
-					},
-				},
-			},
-			possibleDirections: []Direction{
-				UP,
-			},
-			opts: SolveOptions{},
-		},
-		{
-			desc: "no moves available",
-			game: tstGame,
-			board: Board{
-				Width:  5,
-				Height: 5,
-				Hazards: CoordList{
-					{
-						X: 0,
-						Y: 1,
-					},
-				},
-			},
-			you: Battlesnake{
-				Head: Coord{
-					X: 0,
-					Y: 0,
-				},
-				Body: CoordList{
-					{
-						X: 0,
-						Y: 0,
-					},
-					{
-						X: 1,
-						Y: 0,
-					},
-				},
-			},
-			expectedError: ErrNoPossibleMove,
-			opts:          SolveOptions{},
-		},
-		{
-			desc:  "snake limits options",
-			game:  tstGame,
-			board: opposingSnakeBoard,
-			you: Battlesnake{
-				Head: Coord{
-					X: 0,
-					Y: 1,
-				},
-				Body: CoordList{
-					{
-						X: 0,
-						Y: 0,
-					},
-					{
-						X: 0,
-						Y: 1,
 					},
 				},
 			},
@@ -280,7 +199,7 @@ func TestSolverPickMove(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			s := Solver{}
-			actual, err := s.PickMove(tC.possibleMoves)
+			actual, err := s.PickMove(tC.possibleMoves, SolveOptions{})
 			if tC.expectedError != nil {
 				assert.ErrorIs(t, err, tC.expectedError)
 				return
@@ -299,6 +218,7 @@ func TestSolverScore(t *testing.T) {
 		you      Battlesnake
 		moves    CoordList
 		expected CoordList
+		opts     SolveOptions
 	}{
 		{
 			desc:  "body length 1, no food",
@@ -338,6 +258,7 @@ func TestSolverScore(t *testing.T) {
 					Direction: DOWN,
 				},
 			},
+			opts: SolveOptions{},
 			expected: CoordList{
 				{
 					X:         6,
@@ -494,6 +415,9 @@ func TestSolverScore(t *testing.T) {
 					Direction: UP,
 				},
 			},
+			opts: SolveOptions{
+				FoodReward: 5,
+			},
 			expected: CoordList{
 				{
 					X:         6,
@@ -574,6 +498,9 @@ func TestSolverScore(t *testing.T) {
 					Direction: UP,
 				},
 			},
+			opts: SolveOptions{
+				FoodReward: 5,
+			},
 			expected: CoordList{
 				{
 					X:         6,
@@ -604,7 +531,7 @@ func TestSolverScore(t *testing.T) {
 				Board: tC.board,
 				You:   tC.you,
 			}
-			scoredMoves := s.score(tC.moves)
+			scoredMoves := s.score(tC.moves, tC.opts)
 			assert.Equal(t, tC.expected, scoredMoves) // order is important
 		})
 	}

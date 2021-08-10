@@ -33,6 +33,9 @@ type config struct {
 		FoodReward               int  `default:"20" split_words:"true"`
 		HazardPenalty            int  `default:"40" split_words:"true"`
 	} `split_words:"true"`
+	Logger struct {
+		Enabled bool `default:"true" split_words:"true"`
+	}
 }
 
 func main() {
@@ -46,6 +49,12 @@ func main() {
 	err := envconfig.Process("", &c)
 	if err != nil {
 		l.Fatal("could not process env", "err", err.Error())
+	}
+
+	if !c.Logger.Enabled {
+		l = logger{
+			base: log.NewNopLogger(),
+		}
 	}
 
 	// Create new relic agent

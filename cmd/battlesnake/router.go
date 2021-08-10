@@ -14,7 +14,7 @@ func router(h *handler) http.Handler {
 	// Wire handlers
 	r.HandleFunc("/", h.health).Methods(http.MethodGet)
 	r.HandleFunc("/start", h.start).Methods(http.MethodPost)
-	r.HandleFunc("/move", h.move).Methods(http.MethodPost)
+	r.HandleFunc("/move", h.CreateMoveHandlerWithSolveOpts(h.so)).Methods(http.MethodPost)
 	r.HandleFunc("/end", h.end).Methods(http.MethodPost)
 
 	return r

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"math/rand"
 	"net/http"
 
 	"github.com/clocklear/battlesnake/lib/gamerecorder"
@@ -15,7 +14,7 @@ type handler struct {
 	rec gamerecorder.GameRecorder
 	l   logger
 	nr  *newrelic.Application
-	so  v1.SolveOptions
+	so  v1.SolveOptions // TODO: this probably shouldn't live here
 }
 
 type BattlesnakeInfoResponse struct {
@@ -69,47 +68,46 @@ type moveResponse struct {
 	Shout string `json:"shout,omitempty"`
 }
 
-func (h *handler) move(w http.ResponseWriter, r *http.Request) {
-	txn := newrelic.FromContext(r.Context())
-	request := v1.GameRequest{}
-	err := json.NewDecoder(r.Body).Decode(&request)
-	if err != nil {
-		h.l.Error("bad move request", "err", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// Create a solver and use it to determine what we do next
-	s := v1.Solver(request)
-
-	var resp moveResponse
-	possibleMoves, err := s.PossibleMoves(h.so)
-	var move string
-	if err != nil {
-		resp.Move = "up"
-		resp.Shout = negativeResponse()
-		move = "invalid"
-	} else {
-		resp.Move = string(randDirection(possibleMoves.Directions()))
-		if rand.Intn(100) < 5 {
-			resp.Shout = neutralResponse()
+func (h *handler) CreateMoveHandlerWithSolveOpts(opts v1.SolveOptions) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		txn := newrelic.FromContext(r.Context())
+		request := v1.GameRequest{}
+		err := json.NewDecoder(r.Body).Decode(&request)
+		if err != nil {
+			h.l.Error("bad move request", "err", err.Error())
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
-		move = resp.Move
-	}
 
-	// Record this move
-	err = h.rec.Move(context.Background(), request, move)
-	if err != nil {
-		txn.NoticeError(err)
-		h.l.Error("failed to record game move", "game", request.Game.ID, "turn", request.Turn, "move", resp.Move, "err", err.Error())
-	}
-	h.l.Info("responding with move", "game", request.Game.ID, "move", resp.Move)
+		// Create a solver and use it to determine what we do next
+		s := v1.Solver(request)
 
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
-		txn.NoticeError(err)
-		h.l.Error("failed to encode move response", "err", err.Error())
+		var resp moveResponse
+		possibleMoves, err := s.PossibleMoves(opts)
+		var move string
+		if err != nil {
+			resp.Move = "up"
+			move = "invalid"
+		} else {
+			d, _ := s.PickMove(possibleMoves, opts)
+			resp.Move = string(d)
+			move = resp.Move
+		}
+
+		// Record this move
+		err = h.rec.Move(context.Background(), request, move)
+		if err != nil {
+			txn.NoticeError(err)
+			h.l.Error("failed to record game move", "game", request.Game.ID, "turn", request.Turn, "move", resp.Move, "err", err.Error())
+		}
+		h.l.Info("responding with move", "game", request.Game.ID, "move", resp.Move)
+
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			txn.NoticeError(err)
+			h.l.Error("failed to encode move response", "err", err.Error())
+		}
 	}
 }
 
@@ -131,34 +129,4 @@ func (h *handler) end(w http.ResponseWriter, r *http.Request) {
 
 	// Nothing to respond with here
 	h.l.Info("ending game", "gameId", request.Game.ID)
-}
-
-func negativeResponse() string {
-	r := []string{
-		"oh crap",
-		"bummer",
-		"ouch",
-		"whoops",
-		"dangit",
-		"good game",
-		"sayonara",
-		"eeeks",
-	}
-	return r[rand.Intn(len(r))]
-}
-
-func neutralResponse() string {
-	r := []string{
-		"here we go!",
-		"i'm coming for you",
-		"da dun dun dun",
-		"whee!",
-		"has anyone seen my coffee?",
-		"choo-choo!",
-	}
-	return r[rand.Intn(len(r))]
-}
-
-func randDirection(d []v1.Direction) v1.Direction {
-	return d[rand.Intn(len(d))]
 }

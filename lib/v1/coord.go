@@ -66,6 +66,9 @@ type CoordList []Coord
 
 // Contains determines if the given Coord is present in the list
 func (cl CoordList) Contains(c Coord) bool {
+	if cl == nil || len(cl) == 0 {
+		return false
+	}
 	for _, v := range cl {
 		if v.X == c.X && v.Y == c.Y {
 			return true
