@@ -45,19 +45,13 @@ type Battlesnake struct {
 // position and the provided board.  It takes the board
 // bounds and hazards into consideration.  An error
 // will the thrown if no moves are possible.
-func (bs Battlesnake) PossibleMoves(b Board, opts SolveOptions) (CoordList, error) {
+func (bs Battlesnake) PossibleMoves(b Board) (CoordList, error) {
 	cl := CoordList{}
 	// for each direction..
 	for _, d := range allDirections {
 		// ..project the head that way
 		c := bs.Head.Project(d)
 
-<<<<<<< HEAD
-		// Give the move a base score of 50
-		c.Score = 50
-
-=======
->>>>>>> feature/CL_IntroduceFoodLogic
 		// Does it fit on the board?
 		if !c.WithinBounds(b) {
 			continue
@@ -66,25 +60,7 @@ func (bs Battlesnake) PossibleMoves(b Board, opts SolveOptions) (CoordList, erro
 		if bs.Body.Contains(c) {
 			continue
 		}
-<<<<<<< HEAD
-		// Does it overlap with food?  Reward!
-		if b.Food != nil && len(b.Food) > 0 {
-			if b.Food.Contains(c) {
-				// Improve the score of food moves
-				c.Score += 20
-			}
-		}
 
-		// Does it overlap with the board hazards?
-		if b.Hazards != nil && len(b.Hazards) > 0 {
-			if b.Hazards.Contains(c) {
-				// Reduce the score of hazard moves
-				c.Score -= 40
-			}
-		}
-=======
-
->>>>>>> feature/CL_IntroduceFoodLogic
 		// Looks like a valid move
 		// Might be a hazard, but it's still valid.
 		cl = append(cl, c)
@@ -95,17 +71,7 @@ func (bs Battlesnake) PossibleMoves(b Board, opts SolveOptions) (CoordList, erro
 	return cl, nil
 }
 
-// Project moves the Battlesnake to the given coordinate
-<<<<<<< HEAD
-func (bs Battlesnake) Project(loc Coord, willGrow bool) Battlesnake {
-	bs.Head = loc
-	// Prepend head to body
-	bs.Body = append([]Coord{loc}, bs.Body...)
-	if !willGrow {
-		// Drop last elem
-		bs.Body = bs.Body[:len(bs.Body)-1]
-	}
-=======
+// Project moves the Battlesnake to the given coordinate on the given board
 func (bs Battlesnake) Project(loc Coord, board Board) Battlesnake {
 	bs.Head = loc
 	// Prepend head to body
@@ -122,7 +88,6 @@ func (bs Battlesnake) Project(loc Coord, board Board) Battlesnake {
 	if board.Hazards.Contains(loc) {
 		bs.Health -= HazardDamagePerTurn
 	}
->>>>>>> feature/CL_IntroduceFoodLogic
 	return bs
 }
 
@@ -131,10 +96,6 @@ func (bs Battlesnake) Project(loc Coord, board Board) Battlesnake {
 // * have possible moves
 // * have non-zero health
 func (bs Battlesnake) IsValid(b Board) bool {
-<<<<<<< HEAD
-	_, err := bs.PossibleMoves(b, SolveOptions{})
-=======
 	_, err := bs.PossibleMoves(b)
->>>>>>> feature/CL_IntroduceFoodLogic
 	return err == nil && bs.Health > 0
 }
