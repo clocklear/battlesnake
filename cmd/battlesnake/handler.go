@@ -60,7 +60,7 @@ func (h *handler) start(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Nothing to respond with here
-	h.l.Info("starting game", "gameId", request.Game.ID)
+	// h.l.Info("starting game", "gameId", request.Game.ID)
 }
 
 type moveResponse struct {
@@ -100,7 +100,7 @@ func (h *handler) CreateMoveHandlerWithSolveOpts(opts v1.SolveOptions) func(w ht
 			txn.NoticeError(err)
 			h.l.Error("failed to record game move", "game", request.Game.ID, "turn", request.Turn, "move", resp.Move, "err", err.Error())
 		}
-		h.l.Info("responding with move", "game", request.Game.ID, "move", resp.Move)
+		// h.l.Info("responding with move", "game", request.Game.ID, "move", resp.Move)
 
 		w.Header().Set("Content-Type", "application/json")
 		err = json.NewEncoder(w).Encode(resp)
@@ -128,5 +128,5 @@ func (h *handler) end(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Nothing to respond with here
-	h.l.Info("ending game", "gameId", request.Game.ID)
+	// h.l.Info("ending game", "gameId", request.Game.ID)
 }

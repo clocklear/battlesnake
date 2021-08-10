@@ -36,6 +36,9 @@ type config struct {
 	Logger struct {
 		Enabled bool `default:"true" split_words:"true"`
 	}
+	NewRelic struct {
+		LicenseKey string `split_words:"true"`
+	} `split_words:"true"`
 }
 
 func main() {
@@ -59,11 +62,13 @@ func main() {
 
 	// Create new relic agent
 	var nr *newrelic.Application
-	nr, err = newrelic.NewApplication(
-		newrelic.ConfigFromEnvironment(),
-	)
-	if err != nil {
-		l.Fatal("failed to create new relic", "err", err.Error())
+	if c.NewRelic.LicenseKey != "" {
+		nr, err = newrelic.NewApplication(
+			newrelic.ConfigFromEnvironment(),
+		)
+		if err != nil {
+			l.Fatal("failed to create new relic", "err", err.Error())
+		}
 	}
 
 	// Create gamerecorder
