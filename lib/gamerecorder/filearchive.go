@@ -79,11 +79,10 @@ func (r *FileArchive) prune() {
 	if len(gameIds) == 0 {
 		return
 	}
-	r.mu.Lock()
 	for _, g := range gameIds {
+		// purge does its own locking
 		r.purge(g)
 	}
-	r.mu.Unlock()
 }
 
 func gameKey(req v1.GameRequest) string {

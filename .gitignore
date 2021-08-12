@@ -2,6 +2,7 @@
 .cmd
 .idea
 .vscode
-./battlesnake
+battlesnake
+!cmd/battlesnake/*
 *.json.gz
 *.json
