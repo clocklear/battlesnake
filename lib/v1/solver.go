@@ -143,6 +143,9 @@ func (s Solver) PickMove(possibleMoves CoordList, opts SolveOptions) (Direction,
 		if opts.UseSingleBestOption {
 			return possibleMoves[0].Direction, nil
 		}
+		if s.Game.Ruleset.Name == RulesetWrapped {
+			return randDirection(possibleMoves.Directions()), nil
+		}
 		// If the first option here is significantly stronger than the others, use it
 		if possibleMoves[0].Score-possibleMoves[1].Score >= 4 {
 			return possibleMoves[0].Direction, nil
