@@ -183,7 +183,7 @@ func (r *FileArchive) purge(gameId string) {
 }
 
 func didWin(g game, endState v1.GameRequest) bool {
-	return endState.You.IsValid(endState.Board) && hasNoInvalidDecision(g)
+	return endState.You.IsValid(endState.Board, endState.Game) && hasNoInvalidDecision(g)
 }
 
 func hasNoInvalidDecision(g game) bool {

@@ -45,17 +45,24 @@ type Battlesnake struct {
 // position and the provided board.  It takes the board
 // bounds and hazards into consideration.  An error
 // will the thrown if no moves are possible.
-func (bs Battlesnake) PossibleMoves(b Board) (CoordList, error) {
+func (bs Battlesnake) PossibleMoves(b Board, g Game) (CoordList, error) {
 	cl := CoordList{}
 	// for each direction..
 	for _, d := range allDirections {
 		// ..project the head that way
 		c := bs.Head.Project(d)
 
-		// Does it fit on the board?
-		if !c.WithinBounds(b) {
-			continue
+		// Projection is... different for wrapped games
+		if g.Ruleset.Name == RulesetWrapped {
+			// We need to wrap this coord in a wrapped game
+			c = c.WrapForBoard(b)
+		} else {
+			// Does it fit on the board?
+			if !c.WithinBounds(b) {
+				continue
+			}
 		}
+
 		// Does it overlap with our body?
 		if bs.Body.Contains(c) {
 			continue
@@ -95,7 +102,7 @@ func (bs Battlesnake) Project(loc Coord, board Board) Battlesnake {
 // Valid snakes:
 // * have possible moves
 // * have non-zero health
-func (bs Battlesnake) IsValid(b Board) bool {
-	_, err := bs.PossibleMoves(b)
+func (bs Battlesnake) IsValid(b Board, g Game) bool {
+	_, err := bs.PossibleMoves(b, g)
 	return err == nil && bs.Health > 0
 }

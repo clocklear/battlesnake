@@ -47,6 +47,23 @@ func (c Coord) Project(d Direction) Coord {
 	return c
 }
 
+// WrapForBoard wraps the given coordinate around the edge
+// of the given game board so that it remains valid.
+// Note this is only valid for the 'wrapped' ruleset.
+func (c Coord) WrapForBoard(b Board) Coord {
+	if c.X < 0 {
+		c.X += b.Width
+	} else if c.X > (b.Width - 1) {
+		c.X -= b.Width
+	}
+	if c.Y < 0 {
+		c.Y += b.Height
+	} else if c.Y > (b.Height - 1) {
+		c.Y -= b.Height
+	}
+	return c
+}
+
 // DistanceFrom returns the distance this Coord is from the given Coord
 func (c Coord) DistanceFrom(other Coord) float64 {
 	return math.Sqrt(math.Pow(float64(other.X-c.X), 2) + math.Pow(float64(other.Y-c.Y), 2))

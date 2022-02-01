@@ -31,7 +31,7 @@ func (s Solver) PossibleMoves(opts SolveOptions) (CoordList, error) {
 
 	// Derive possible moves from given position
 	// Takes walls, hazards, own body into consideration
-	myPossibleMoves, err := s.You.PossibleMoves(s.Board)
+	myPossibleMoves, err := s.You.PossibleMoves(s.Board, s.Game)
 	if err != nil {
 		// bleh. Nothing to do.
 		return nil, err
@@ -50,7 +50,7 @@ func (s Solver) PossibleMoves(opts SolveOptions) (CoordList, error) {
 
 		if opts.ConsiderOpponentNextMove {
 			// Determine possible moves of this snake
-			pm, err := snake.PossibleMoves(s.Board)
+			pm, err := snake.PossibleMoves(s.Board, s.Game)
 			if err != nil {
 				// snakes next moves is not a threat -- has no valid moves
 				continue
@@ -70,7 +70,7 @@ func (s Solver) PossibleMoves(opts SolveOptions) (CoordList, error) {
 		safeMoves := CoordList{}
 		for _, pv := range myPossibleMoves {
 			nS := s.You.Project(pv, s.Board)
-			if nS.IsValid(s.Board) {
+			if nS.IsValid(s.Board, s.Game) {
 				// Should be safe
 				safeMoves = append(safeMoves, pv)
 			}

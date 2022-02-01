@@ -13,6 +13,7 @@ func TestPossibleMoves(t *testing.T) {
 		b             Board
 		expected      CoordList
 		expectedError error
+		g             Game
 	}{
 		{
 			desc: "success, simple",
@@ -31,6 +32,11 @@ func TestPossibleMoves(t *testing.T) {
 			b: Board{
 				Height: 11,
 				Width:  11,
+			},
+			g: Game{
+				Ruleset: Ruleset{
+					Name: RulesetStandard,
+				},
 			},
 			expected: CoordList{
 				{
@@ -77,6 +83,11 @@ func TestPossibleMoves(t *testing.T) {
 				Height: 11,
 				Width:  11,
 			},
+			g: Game{
+				Ruleset: Ruleset{
+					Name: RulesetStandard,
+				},
+			},
 			expected: CoordList{
 				{
 					X:         5,
@@ -116,6 +127,11 @@ func TestPossibleMoves(t *testing.T) {
 			b: Board{
 				Height: 11,
 				Width:  11,
+			},
+			g: Game{
+				Ruleset: Ruleset{
+					Name: RulesetStandard,
+				},
 			},
 			expected: CoordList{
 				{
@@ -161,9 +177,13 @@ func TestPossibleMoves(t *testing.T) {
 					},
 				},
 			},
+			g: Game{
+				Ruleset: Ruleset{
+					Name: RulesetStandard,
+				},
+			},
 			expectedError: ErrNoPossibleMove,
 		},
-
 		{
 			desc: "success, must go left because walls and body",
 			s: Battlesnake{
@@ -185,6 +205,11 @@ func TestPossibleMoves(t *testing.T) {
 			b: Board{
 				Height: 11,
 				Width:  11,
+			},
+			g: Game{
+				Ruleset: Ruleset{
+					Name: RulesetStandard,
+				},
 			},
 			expected: CoordList{
 				{
@@ -230,12 +255,71 @@ func TestPossibleMoves(t *testing.T) {
 					},
 				},
 			},
+			g: Game{
+				Ruleset: Ruleset{
+					Name: RulesetStandard,
+				},
+			},
 			expectedError: ErrNoPossibleMove,
+		},
+		{
+			desc: "success, due to wrapped game mode",
+			s: Battlesnake{
+				Head: Coord{
+					X: 10,
+					Y: 10,
+				},
+				Body: CoordList{
+					{
+						X: 10,
+						Y: 10,
+					},
+					{
+						X: 10,
+						Y: 9,
+					},
+					{
+						X: 9,
+						Y: 9,
+					},
+					{
+						X: 9,
+						Y: 10,
+					},
+				},
+			},
+			b: Board{
+				Height: 11,
+				Width:  11,
+				Hazards: CoordList{
+					{
+						X: 9,
+						Y: 10,
+					},
+				},
+			},
+			g: Game{
+				Ruleset: Ruleset{
+					Name: RulesetWrapped,
+				},
+			},
+			expected: CoordList{
+				{
+					X:         10,
+					Y:         0,
+					Direction: UP,
+				},
+				{
+					X:         0,
+					Y:         10,
+					Direction: RIGHT,
+				},
+			},
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			actual, err := tC.s.PossibleMoves(tC.b)
+			actual, err := tC.s.PossibleMoves(tC.b, tC.g)
 			if tC.expectedError != nil {
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, tC.expectedError)

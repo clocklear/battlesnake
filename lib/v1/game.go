@@ -10,3 +10,12 @@ type Ruleset struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
+
+const (
+	RulesetStandard    = "standard"
+	RulesetSolo        = "solo"
+	RulesetRoyale      = "royale"
+	RulesetSquad       = "squad"
+	RulesetConstrictor = "constrictor"
+	RulesetWrapped     = "wrapped"
+)
