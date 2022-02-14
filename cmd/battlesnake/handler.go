@@ -78,7 +78,7 @@ func (h *handler) CreateMoveHandlerWithSolveOpts(opts v1.SolveOptions) func(w ht
 		}
 
 		// Create a solver and use it to determine what we do next
-		s := v1.Solver(request)
+		s := v1.CreateSolver(request).WithLogger(h.l.base)
 
 		var resp moveResponse
 		possibleMoves, err := s.PossibleMoves(opts)

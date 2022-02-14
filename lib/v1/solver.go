@@ -1,12 +1,33 @@
 package v1
 
-import "sort"
+import (
+	"fmt"
+	"sort"
+
+	"github.com/go-kit/kit/log"
+)
 
 type Solver struct {
-	Game  Game
-	Turn  int
-	Board Board
-	You   Battlesnake
+	Game   Game
+	Turn   int
+	Board  Board
+	You    Battlesnake
+	logger log.Logger
+}
+
+func CreateSolver(gr GameRequest) *Solver {
+	return &Solver{
+		Game:   gr.Game,
+		Turn:   gr.Turn,
+		Board:  gr.Board,
+		You:    gr.You,
+		logger: log.NewNopLogger(),
+	}
+}
+
+func (s *Solver) WithLogger(l log.Logger) *Solver {
+	s.logger = l
+	return s
 }
 
 type SolveOptions struct {
@@ -144,6 +165,7 @@ func (s Solver) PickMove(possibleMoves CoordList, opts SolveOptions) (Direction,
 			return possibleMoves[0].Direction, nil
 		}
 		if s.Game.Ruleset.Name == RulesetWrapped {
+			s.logger.Log("level", "debug", "msg", "wrapped game possible moves", "moves", fmt.Sprintf("%#v", possibleMoves))
 			return randDirection(possibleMoves.Directions()), nil
 		}
 		// If the first option here is significantly stronger than the others, use it
