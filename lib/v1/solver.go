@@ -165,7 +165,7 @@ func (s Solver) PickMove(possibleMoves CoordList, opts SolveOptions) (Direction,
 			return possibleMoves[0].Direction, nil
 		}
 		if s.Game.Ruleset.Name == RulesetWrapped {
-			s.logger.Log("level", "debug", "msg", "wrapped game possible moves", "moves", fmt.Sprintf("%#v", possibleMoves))
+			s.logger.Log("level", "debug", "msg", "wrapped game possible moves", "moves", fmt.Sprintf("%#v", possibleMoves), "turn", s.Turn, "me", s.You.ID)
 			return randDirection(possibleMoves.Directions()), nil
 		}
 		// If the first option here is significantly stronger than the others, use it
