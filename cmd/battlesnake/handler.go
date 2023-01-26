@@ -18,19 +18,23 @@ type handler struct {
 }
 
 type BattlesnakeInfoResponse struct {
-	Author string `json:"author"`
-	Color  string `json:"color"`
-	Head   string `json:"head"`
-	Tail   string `json:"tail"`
+	APIVersion string `json:"apiversion"`
+	Author     string `json:"author"`
+	Color      string `json:"color"`
+	Head       string `json:"head"`
+	Tail       string `json:"tail"`
+	Version    string `json:"version"`
 }
 
 func (h *handler) health(w http.ResponseWriter, r *http.Request) {
 	txn := newrelic.FromContext(r.Context())
 	response := BattlesnakeInfoResponse{
-		Author: "clocklear",
-		Color:  "#238270",
-		Head:   "silly",
-		Tail:   "coffee",
+		APIVersion: "1",
+		Author:     "clocklear",
+		Color:      "#238270",
+		Head:       "silly",
+		Tail:       "coffee",
+		Version:    "1.0.1",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
